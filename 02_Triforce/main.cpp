@@ -3,9 +3,10 @@
 #include <GLApp.h>
 
 class MyGLApp : public GLApp {
-public:
-  double time{0.0};
-  Mat4 modelView{};
+private:
+  const float degreePreSecond{ 45.0f };
+  float angle{0.0f};
+
   Mat4 projection{};
   GLuint program{0};
   GLint modelViewMatrixUniform{-1};
@@ -15,32 +16,31 @@ public:
 
   constexpr static float sqrt3{ 1.7320508076f };
 
-  const GLfloat vertexPositions[9] = {
+  constexpr static GLfloat vertexPositions[9] = {
      1.5f, 2.0f, 0.0f,
     -1.5f, 0.0f, 0.0f,
      1.5f, 0.0f, 0.0f
   };
-  
+public:
   MyGLApp()
     : GLApp(800,600,4,"Assignment 02 - Triforce")
   {}
   
   virtual void init() override {
-    time = glfwGetTime();
     setupShaders();
     setupGeometry();
     GL(glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
   }
-  
+
+  virtual void animate(double animationTime) override {
+
+  }
+
   virtual void draw() override {
-    const double t = glfwGetTime();
-    const double d = t - time;
-    time = t;
-    
     GL(glClear(GL_COLOR_BUFFER_BIT));
-    
+
     GL(glUseProgram(program));
-    modelView = Mat4::translation(0.0f, -1.0f, 0.0f);
+    Mat4 modelView = Mat4::translation(0.0f, -1.0f, 0.0f);
     GL(glUniformMatrix4fv(modelViewMatrixUniform, 1, GL_TRUE, modelView));
     
     GL(glBindVertexArray(vaos));
@@ -61,7 +61,7 @@ public:
     GL(glUseProgram(program));
     GL(glUniformMatrix4fv(projectionMatrixUniform, 1, GL_TRUE, projection));
     GL(glUseProgram(0));
-    glViewport(0, 0, width, height);
+    GL(glViewport(0, 0, width, height));
   }
 
   std::string loadFile(const std::string& filename) {
@@ -123,6 +123,8 @@ public:
   
   virtual void keyboard(int key, int scancode, int action, int mods) override
   {
+    if (key == GLENV_KEY_ESCAPE && action == GLENV_PRESS)
+      closeWindow();
   }
 };
 
