@@ -48,12 +48,12 @@ enum class TrisDrawType {
  * Typical usage:
  * @code
  * struct MyApp : GLApp {
- *   void init() override { /* load data */ }
-*   void draw() override { /* issue draws */ }
-*   void animate(double t) override { /* update state */ }
-* };
-* int main(){ MyApp().run(); }
-* @endcode
+ *   void init() override {  load data  }
+ *   void draw() override {  issue draws  }
+ *   void animate(double t) override {  update state  }
+ * };
+ * int main(){ MyApp().run(); }
+ * @endcode
 */
 class GLApp {
 public:

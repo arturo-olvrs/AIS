@@ -11,12 +11,12 @@
  *
  * Usage example:
  * @code
- * if (action == GLENV_PRESS && key == GLENV_KEY_SPACE) { /* ... */ }
-* if (button == GLENV_MOUSE_BUTTON_LEFT) { /* ... */ }
-* if (mods & GLENV_MOD_CONTROL) { /* ... */ }
-* @endcode
-*
-* The mapping is chosen at compile time via the `__EMSCRIPTEN__` define.
+ * if (action == GLENV_PRESS && key == GLENV_KEY_SPACE) {  ...  }
+ * if (button == GLENV_MOUSE_BUTTON_LEFT) {  ...  }
+ * if (mods & GLENV_MOD_CONTROL) {  ...  }
+ * @endcode
+ *
+ * The mapping is chosen at compile time via the `__EMSCRIPTEN__` define.
 */
 
 #ifdef __EMSCRIPTEN__
