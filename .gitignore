@@ -39,3 +39,13 @@ LatexUtils
 # macOS Files
 .DS_Store
 xcuserdata
+
+
+
+# Executables
+01_HelloGL/hello_opengl
+02_Triforce/triforce
+03_HelloShading/hello_shading
+04_Textureing/hello_textureing
+05_Shadows/hello_shadows
+06_Reflections/hello_sky
