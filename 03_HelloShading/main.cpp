@@ -90,7 +90,7 @@ public:
     Mat4 modelViewProjection = projectionMatrix * viewMatrix * modelMatrix;
     GL(glUniformMatrix4fv(modelViewProjectionMatrixUniform, 1, GL_TRUE, modelViewProjection));
     GL(glBindVertexArray(vaos[0]));
-    GL(glDrawArrays(GL_TRIANGLES, 0, sizeof(UnitPlane::vertices) / sizeof(UnitPlane::vertices[0])));
+    GL(glDrawArrays(GL_TRIANGLES, 0, sizeof(UnitPlane::vertices) / (3*sizeof(UnitPlane::vertices[0]))));
 
     modelMatrix = Mat4();
     modelViewProjection = projectionMatrix * viewMatrix * modelMatrix;
@@ -215,22 +215,22 @@ public:
   }
 
   virtual void keyboard(int key, int scancode, int action, int mods) override {
-    if (key == GLFW_KEY_LEFT_CONTROL) controlDown = action == GLFW_PRESS;
+    if (key == GLENV_KEY_LEFT_CONTROL) controlDown = action == GLFW_PRESS;
 
-    if (action == GLFW_PRESS) {
+    if (action == GLENV_PRESS) {
       switch (key) {
-        case GLFW_KEY_ESCAPE:
+        case GLENV_KEY_ESCAPE:
           closeWindow();
           break;
-        case GLFW_KEY_F:
+        case GLENV_KEY_F:
           shading = Shading::FLAT;
           std::cout << "switched to FLAT shading" << std::endl;
           break;
-        case GLFW_KEY_G:
+        case GLENV_KEY_G:
           shading = Shading::GOURAUD;
           std::cout << "switched to GOURAUD shading" << std::endl;
           break;
-        case GLFW_KEY_P:
+        case GLENV_KEY_P:
           shading = Shading::PHONG;
           std::cout << "switched to PHONG shading" << std::endl;
           break;
@@ -269,17 +269,17 @@ public:
   }
 
   virtual void mouseButton(int button, int action, int mods, double xPosition, double yPosition) override {
-    if (button == GLFW_MOUSE_BUTTON_RIGHT) rightMouseDown = action == GLFW_PRESS;
-    if (button == GLFW_MOUSE_BUTTON_LEFT) leftMouseDown = action == GLFW_PRESS;
+    if (button == GLENV_MOUSE_BUTTON_RIGHT) rightMouseDown = action == GLENV_PRESS;
+    if (button == GLENV_MOUSE_BUTTON_LEFT) leftMouseDown = action == GLENV_PRESS;
 
-    if ((button == GLFW_MOUSE_BUTTON_LEFT ||
-         button == GLFW_MOUSE_BUTTON_RIGHT) && action == GLFW_PRESS) {
+    if ((button == GLENV_MOUSE_BUTTON_LEFT ||
+         button == GLENV_MOUSE_BUTTON_RIGHT) && action == GLENV_PRESS) {
       mouse[0] = static_cast<float>(xPosition);
       mouse[1] = static_cast<float>(yPosition);
       cameraActive = true;
       firstCameraUpdate = true;
-    } else if ((button == GLFW_MOUSE_BUTTON_LEFT ||
-              button == GLFW_MOUSE_BUTTON_RIGHT) && action == GLFW_RELEASE) {
+    } else if ((button == GLENV_MOUSE_BUTTON_LEFT ||
+              button == GLENV_MOUSE_BUTTON_RIGHT) && action == GLENV_RELEASE) {
       cameraActive = false;
       firstCameraUpdate = false;
     }
