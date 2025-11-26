@@ -1,0 +1,25 @@
+#version 410 core
+
+// ----------- Inputs from VAO --------------
+layout(location = 0) in vec3 vertexPosition;
+layout(location = 1) in vec3 vertexNormal;
+
+// ----------- Uniforms --------------
+uniform mat4 MVP;        // Model-View-Projection matrix
+uniform mat4 MV;         // Model-View matrix
+uniform mat3 NormalMat;  // Normal matrix
+
+uniform vec3 lightPos;   // Position of point light in world space
+uniform vec3 viewPos;    // Position of camera
+
+// Material parameters
+uniform vec3 Kd;  // Diffuse color (set in your C++ via kdUniform)
+
+// Output to fragment shader (FLAT!)
+flat out vec4 fragColor;
+
+void main()
+{
+    gl_Position = MVP * vec4(vertexPosition, 1);
+    fragColor = vec4(0.5 * vertexNormal + 0.5 * Kd, 1);
+}
