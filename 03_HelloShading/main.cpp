@@ -2,6 +2,7 @@
 
 #include <GLApp.h>
 #include <Vec2.h>
+#include <Mat3.h>
 #include "Teapot.h"
 #include "UnitPlane.h"
 #include "UnitCube.h"
@@ -24,6 +25,10 @@ public:
   bool controlDown{false};
 
   GLint modelViewProjectionMatrixUniform{-1};
+  GLint modelMatrixUniform{-1};
+  GLint normalMatrixUniform{-1};
+  GLint lightPosUniform{-1};
+  GLint viewPosUniform{-1};
 
   enum class Shading {
     FLAT, GOURAUD, PHONG
@@ -120,23 +125,36 @@ public:
     GL(glUniformMatrix4fv(modelViewProjectionMatrixUniform, 1, GL_TRUE, modelViewProjection));
     GL(glBindVertexArray(vaos[2]));
     GL(glDrawElements(GL_TRIANGLES, sizeof(UnitCube::indices) / sizeof(UnitCube::indices[0]), GL_UNSIGNED_INT, (void*)0));
-    GL(glBindVertexArray(0));
 
 
     selectShading();
+    GL(glUniform3fv(lightPosUniform, 1, modelMatrix * lightPosition));
+    GL(glUniform3fv(viewPosUniform, 1, Vec4(viewPosition, 1.0f)));
 
+
+    // Draw plane
     modelMatrix = Mat4();
     modelMatrix = modelMatrix * Mat4::scaling(100, 100, 100);
     modelViewProjection = projectionMatrix * viewMatrix * modelMatrix;
+    Mat4 normalMatrix = Mat4::transpose(Mat4::inverse(modelMatrix));
     GL(glUniformMatrix4fv(modelViewProjectionMatrixUniform, 1, GL_TRUE, modelViewProjection));
+    GL(glUniformMatrix4fv(modelMatrixUniform, 1, GL_TRUE, modelMatrix));
+    GL(glUniformMatrix4fv(normalMatrixUniform, 1, GL_TRUE, normalMatrix));
     GL(glBindVertexArray(vaos[0]));
     GL(glDrawArrays(GL_TRIANGLES, 0, sizeof(UnitPlane::vertices) / (3*sizeof(UnitPlane::vertices[0]))));
 
+
+    // Draw teapot
     modelMatrix = Mat4();
     modelViewProjection = projectionMatrix * viewMatrix * modelMatrix;
+    normalMatrix = Mat4::transpose(Mat4::inverse(modelMatrix));
     GL(glUniformMatrix4fv(modelViewProjectionMatrixUniform, 1, GL_TRUE, modelViewProjection));
+    GL(glUniformMatrix4fv(modelMatrixUniform, 1, GL_TRUE, modelMatrix));
+    GL(glUniformMatrix4fv(normalMatrixUniform, 1, GL_TRUE, normalMatrix));
     GL(glBindVertexArray(vaos[1]));
     GL(glDrawElements(GL_TRIANGLES, sizeof(Teapot::indices) / sizeof(Teapot::indices[0]), GL_UNSIGNED_INT, (void*)0));
+
+
     GL(glBindVertexArray(0));
 
   }
@@ -182,7 +200,11 @@ public:
     checkAndThrowProgram(pFlat);
 
     modelViewProjectionMatrixUniform = glGetUniformLocation(pFlat, "MVP");
+    modelMatrixUniform = glGetUniformLocation(pFlat, "modelMat");
+    normalMatrixUniform = glGetUniformLocation(pFlat, "normalMat");
     kdUniform = glGetUniformLocation(pFlat, "kd");
+    lightPosUniform = glGetUniformLocation(pFlat, "lightPos");
+    viewPosUniform = glGetUniformLocation(pFlat, "viewPos");
 
     GL(glDeleteShader(vertexShader));
     GL(glDeleteShader(fragmentShader));
