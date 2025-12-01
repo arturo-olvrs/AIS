@@ -3,7 +3,6 @@
 in vec3 N;
 in vec3 P;
 in vec3 LightPos;
-in vec3 ViewPos;
 
 // Uniforms (deben ser consistentes con el Vertex Shader)
 uniform vec3 kd; // material diffuse color
@@ -16,7 +15,7 @@ void main()
     
     // 1. Vectores de iluminación por fragmento (P está en World Space)
     vec3 L = normalize(LightPos - P);
-    vec3 V = normalize(ViewPos - P);
+    vec3 V = normalize( - P);
     vec3 R = reflect(-L, N);
 
     // ----- Light coefficients -----

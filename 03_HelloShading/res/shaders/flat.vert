@@ -4,11 +4,10 @@ layout(location = 0) in vec3 vertexPosition;  // vertex position in object space
 layout(location = 1) in vec3 vertexNormal;    // vertex normal in object space
 
 uniform mat4 MVP; // model-view-projection Matrix
-uniform mat4 modelMat;   // Model matrix
+uniform mat4 MV;   // Model-View matrix
 uniform mat4 normalMat;  // Normal matrix
 
-uniform vec3 lightPos;   // Position of point light in model space world space
-uniform vec3 viewPos;    // Position of camera in model space
+uniform vec3 lightPos;   // Position of point light in view space
 
 uniform vec3 kd; // material diffuse color
 
@@ -20,8 +19,7 @@ void main()
 
 	// ----- Compute vectors for lighting -----
 
-    // Position in model space
-    vec3 P = vec3(modelMat * vec4(vertexPosition, 1.0));
+    vec3 P = vec3(MV * vec4(vertexPosition, 1.0));
 
     // Correctly transformed normal
     vec3 N = normalize(vec3(normalMat * vec4(vertexNormal, 1)));
@@ -30,7 +28,7 @@ void main()
     vec3 L = normalize(lightPos - P);
 
     // View direction
-    vec3 V = normalize(viewPos - P);
+    vec3 V = normalize(- P);
 
     // Reflection vector
     vec3 R = reflect(-L, N);
