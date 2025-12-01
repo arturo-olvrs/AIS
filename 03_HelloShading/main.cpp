@@ -50,6 +50,8 @@ public:
     setupShaders();
     setupGeometry();
     GL(glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
+
+    GL(glEnable(GL_DEPTH_TEST));
   }
 
   void selectShading() {
