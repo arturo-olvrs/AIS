@@ -128,7 +128,7 @@ public:
 
 
     selectShading();
-    GL(glUniform3fv(lightPosUniform, 1, Vec3(viewMatrix * modelMatrix * lightPosition)));
+    GL(glUniform3fv(lightPosUniform, 1, Vec3(viewMatrix * modelMatrix * Vec3(0,0,0))));
 
 
     // Draw plane
