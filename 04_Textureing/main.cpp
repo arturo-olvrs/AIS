@@ -104,7 +104,7 @@ public:
     pSimpleTex.setUniform("MVP", modelViewProjection);
     pSimpleTex.setTexture("td", stonesDiffuse, 0);
     planeArray.bind();
-    GL(glDrawArrays(GL_TRIANGLES, 0, sizeof(UnitPlane::vertices) / sizeof(UnitPlane::vertices[0])));
+    GL(glDrawArrays(GL_TRIANGLES, 0, sizeof(UnitPlane::vertices) / (3*sizeof(UnitPlane::vertices[0]))));
 
     modelMatrix = {};
     modelView = viewMatrix * modelMatrix;
