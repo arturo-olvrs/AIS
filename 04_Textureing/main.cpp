@@ -20,6 +20,8 @@ public:
   Mat4 projectionMatrix;
 
   GLTexture2D stonesDiffuse{GL_LINEAR, GL_LINEAR};
+  GLTexture2D stonesSpecular{GL_LINEAR, GL_LINEAR};
+  GLTexture2D stonesNormals{GL_LINEAR, GL_LINEAR};
 
   GLProgram pPhong;
   GLProgram pLight;
@@ -72,6 +74,12 @@ public:
   void setupTextures() {
     const Image image = ImageLoader::load("res/Stones_Diffuse.png");
     stonesDiffuse.setData(image.data,image.width, image.height, image.componentCount);
+
+    const Image imageSpec = ImageLoader::load("res/Stones_Specular.png");
+    stonesSpecular.setData(imageSpec.data,imageSpec.width, imageSpec.height, imageSpec.componentCount);
+
+    const Image imageNormals = ImageLoader::load("res/Stones_Normals.png");
+    stonesNormals.setData(imageNormals.data,imageNormals.width, imageNormals.height, imageNormals.componentCount);
   }
 
   virtual void animate(double animationTime) override {
@@ -100,16 +108,22 @@ public:
     Mat4 modelMatrix = Mat4::scaling(100, 100, 100);
     Mat4 modelView = viewMatrix * modelMatrix;
     Mat4 modelViewProjection = projectionMatrix * modelView;
+    Mat4 modelViewIT = Mat4::transpose(Mat4::inverse(modelView));
 
     pSimpleTex.setUniform("MVP", modelViewProjection);
+    pSimpleTex.setUniform("MV", modelView);
+    pSimpleTex.setUniform("MVit", modelViewIT);
+    pSimpleTex.setUniform("lightPosition", lightPosition);
     pSimpleTex.setTexture("td", stonesDiffuse, 0);
+    pSimpleTex.setTexture("ts", stonesSpecular, 1);
+    pSimpleTex.setTexture("tNormals", stonesNormals, 2);
     planeArray.bind();
     GL(glDrawArrays(GL_TRIANGLES, 0, sizeof(UnitPlane::vertices) / (3*sizeof(UnitPlane::vertices[0]))));
 
     modelMatrix = {};
     modelView = viewMatrix * modelMatrix;
     modelViewProjection = projectionMatrix * modelView;
-    Mat4 modelViewIT = Mat4::transpose(Mat4::inverse(modelView));
+    modelViewIT = Mat4::transpose(Mat4::inverse(modelView));
 
     pPhong.enable();
     pPhong.setUniform("MVP", modelViewProjection);
