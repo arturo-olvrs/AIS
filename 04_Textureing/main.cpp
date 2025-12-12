@@ -23,7 +23,7 @@ public:
   GLTexture2D stonesSpecular{GL_LINEAR, GL_LINEAR};
   GLTexture2D stonesNormals{GL_LINEAR, GL_LINEAR};
 
-  GLTexture2D udeNormals{GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_REPEAT};
+  GLTexture2D udeNormals{GL_LINEAR, GL_LINEAR};
 
   GLProgram pPhong;
   GLProgram pLight;
@@ -43,8 +43,10 @@ public:
   GLArray teapotArray;
   GLBuffer teapotPosBuffer{GL_ARRAY_BUFFER};
   GLBuffer teapotNormalBuffer{GL_ARRAY_BUFFER};
-  GLBuffer teapotIndexBuffer{GL_ELEMENT_ARRAY_BUFFER};
+  GLBuffer teapotTangBuffer{GL_ARRAY_BUFFER};
+  GLBuffer teapotBinBuffer{GL_ARRAY_BUFFER};
   GLBuffer teapotTexCoordBuffer{GL_ARRAY_BUFFER};
+  GLBuffer teapotIndexBuffer{GL_ELEMENT_ARRAY_BUFFER};
 
   bool leftMouseDown{false};
   bool rightMouseDown{false};
@@ -77,17 +79,17 @@ public:
   }
 
   void setupTextures() {
-    const Image image = ImageLoader::load("res/Stones_Diffuse.png");
+    Image image = ImageLoader::load("res/Stones_Diffuse.png");
     stonesDiffuse.setData(image.data,image.width, image.height, image.componentCount);
 
-    const Image imageSpec = ImageLoader::load("res/Stones_Specular.png");
-    stonesSpecular.setData(imageSpec.data,imageSpec.width, imageSpec.height, imageSpec.componentCount);
+    image = ImageLoader::load("res/Stones_Specular.png");
+    stonesSpecular.setData(image.data,image.width, image.height, image.componentCount);
 
-    const Image imageNormals = ImageLoader::load("res/Stones_Normals.png");
-    stonesNormals.setData(imageNormals.data,imageNormals.width, imageNormals.height, imageNormals.componentCount);
+    image = ImageLoader::load("res/Stones_Normals.png");
+    stonesNormals.setData(image.data,image.width, image.height, image.componentCount);
 
-    const Image udeImageNormals = ImageLoader::load("res/UDE_Normals.png");
-    udeNormals.setData(udeImageNormals.data,udeImageNormals.width, udeImageNormals.height, udeImageNormals.componentCount);
+    image = ImageLoader::load("res/UDE_Normals.png");
+    udeNormals.setData(image.data,image.width, image.height, image.componentCount);
   }
 
   virtual void animate(double animationTime) override {
@@ -189,11 +191,19 @@ public:
                               sizeof(Teapot::normals)/sizeof(Teapot::normals[0]),
                               3, GL_STATIC_DRAW);
     teapotArray.connectVertexAttrib(teapotNormalBuffer, pPhong, "vertexNormal", 3);
-    teapotIndexBuffer.setData(Teapot::indices, sizeof(Teapot::indices)/sizeof(Teapot::indices[0]));
+    teapotTangBuffer.setData(Teapot::tangents,
+                            sizeof(Teapot::tangents)/sizeof(Teapot::tangents[0]),
+                            3, GL_STATIC_DRAW);
+    teapotArray.connectVertexAttrib(teapotTangBuffer, pPhong, "vertexTangent", 3);
+    teapotBinBuffer.setData(Teapot::binormals,
+                           sizeof(Teapot::binormals)/sizeof(Teapot::binormals[0]),
+                           3, GL_STATIC_DRAW);
+    teapotArray.connectVertexAttrib(teapotBinBuffer, pPhong, "vertexBinormal", 3);
     teapotTexCoordBuffer.setData(Teapot::texCoords,
                                 sizeof(Teapot::texCoords)/sizeof(Teapot::texCoords[0]),
-                                2, GL_STATIC_DRAW);
+                                3, GL_STATIC_DRAW);
     teapotArray.connectVertexAttrib(teapotTexCoordBuffer, pPhong, "texCoords", 2);
+    teapotIndexBuffer.setData(Teapot::indices, sizeof(Teapot::indices)/sizeof(Teapot::indices[0]));
   }
 
   virtual void keyboard(int key, int scancode, int action, int mods) override {
