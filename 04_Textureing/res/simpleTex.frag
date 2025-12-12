@@ -6,6 +6,7 @@ uniform sampler2D tNormals;
 
 uniform mat4 MVit; // model-view inverse transpose Matrix
 uniform vec4 lightPosition;
+uniform mat4 AdjustmentMat;
 
 
 uniform vec3 ld = vec3(0.9f, 0.9f, 0.9f); // light diffuse color
@@ -17,7 +18,8 @@ in vec3 posViewSpace;
 out vec4 color;
 
 void main() {
-  vec3 N_objectWorld = normalize(texture(tNormals, tc).rgb * 2.0 - 1.0);
+  vec3 N_objectWorld_pre = normalize(texture(tNormals, tc).rgb * 2.0 - 1.0);
+  vec3 N_objectWorld = normalize((AdjustmentMat * vec4(N_objectWorld_pre, 1)).xyz);
 
 
   vec3 N = normalize((MVit * vec4(N_objectWorld, 0)).xyz);

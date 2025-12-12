@@ -96,7 +96,7 @@ public:
 
     pLight.enable();
 
-    const Mat4 lightModelMatrix = Mat4::rotationY(-light.angle) * 
+    const Mat4 lightModelMatrix = Mat4::rotationY(light.angle) * 
                                   Mat4::translation(-35, 35, 35);
     const Vec4 lightPosition =  viewMatrix * lightModelMatrix * Vec4(0, 0, 0, 1);
 
@@ -114,6 +114,7 @@ public:
     pSimpleTex.setUniform("MV", modelView);
     pSimpleTex.setUniform("MVit", modelViewIT);
     pSimpleTex.setUniform("lightPosition", lightPosition);
+    pSimpleTex.setUniform("AdjustmentMat", Mat4::rotationX(90.0f));
     pSimpleTex.setTexture("td", stonesDiffuse, 0);
     pSimpleTex.setTexture("ts", stonesSpecular, 1);
     pSimpleTex.setTexture("tNormals", stonesNormals, 2);
