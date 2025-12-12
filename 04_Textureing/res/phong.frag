@@ -1,5 +1,6 @@
 #version 410 core
 
+in vec2 tc;
 in vec3 posViewSpace;
 in vec3 normalViewSpaceInterpolated;
 
@@ -14,9 +15,13 @@ uniform vec3 la = vec3(0.9f, 0.9f, 0.9f); // light ambient color
 uniform vec3 ld = vec3(0.9f, 0.9f, 0.9f); // light diffuse color
 uniform vec3 ls = vec3(0.9f, 0.9f, 0.9f); // light specular color
 
+uniform sampler2D tNormals;
+
 out vec4 color;
 
 void main() {
+  vec3 normalFromTexture = normalize(texture(tNormals, tc).rgb * 2.0 - 1.0);
+
   vec3 normalViewSpace = normalize(normalViewSpaceInterpolated);
   vec3 lightVec = normalize(lightPosition.xyz - posViewSpace);
 
@@ -33,5 +38,5 @@ void main() {
   float s = pow(max(0, dot(viewVec, reflected)), shininess);
   vec3 specular = s * ks * ls;
 
-  color = vec4(ambient + diffuse + specular, 1);
+  color = vec4((ambient + diffuse + specular)*0.0001 + normalFromTexture, 1);
 }

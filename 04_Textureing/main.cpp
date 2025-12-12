@@ -23,6 +23,8 @@ public:
   GLTexture2D stonesSpecular{GL_LINEAR, GL_LINEAR};
   GLTexture2D stonesNormals{GL_LINEAR, GL_LINEAR};
 
+  GLTexture2D udeNormals{GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_REPEAT};
+
   GLProgram pPhong;
   GLProgram pLight;
   GLProgram pSimpleTex;
@@ -34,12 +36,15 @@ public:
   GLArray planeArray;
   GLBuffer planePosBuffer{GL_ARRAY_BUFFER};
   GLBuffer planeNormalBuffer{GL_ARRAY_BUFFER};
+  GLBuffer planeTangentBuffer{GL_ARRAY_BUFFER};
+  GLBuffer planeBinormalBuffer{GL_ARRAY_BUFFER};
   GLBuffer planeTexCoordBuffer{GL_ARRAY_BUFFER};
 
   GLArray teapotArray;
   GLBuffer teapotPosBuffer{GL_ARRAY_BUFFER};
   GLBuffer teapotNormalBuffer{GL_ARRAY_BUFFER};
   GLBuffer teapotIndexBuffer{GL_ELEMENT_ARRAY_BUFFER};
+  GLBuffer teapotTexCoordBuffer{GL_ARRAY_BUFFER};
 
   bool leftMouseDown{false};
   bool rightMouseDown{false};
@@ -80,6 +85,9 @@ public:
 
     const Image imageNormals = ImageLoader::load("res/Stones_Normals.png");
     stonesNormals.setData(imageNormals.data,imageNormals.width, imageNormals.height, imageNormals.componentCount);
+
+    const Image udeImageNormals = ImageLoader::load("res/UDE_Normals.png");
+    udeNormals.setData(udeImageNormals.data,udeImageNormals.width, udeImageNormals.height, udeImageNormals.componentCount);
   }
 
   virtual void animate(double animationTime) override {
@@ -114,7 +122,6 @@ public:
     pSimpleTex.setUniform("MV", modelView);
     pSimpleTex.setUniform("MVit", modelViewIT);
     pSimpleTex.setUniform("lightPosition", lightPosition);
-    pSimpleTex.setUniform("AdjustmentMat", Mat4::rotationX(90.0f));
     pSimpleTex.setTexture("td", stonesDiffuse, 0);
     pSimpleTex.setTexture("ts", stonesSpecular, 1);
     pSimpleTex.setTexture("tNormals", stonesNormals, 2);
@@ -131,6 +138,7 @@ public:
     pPhong.setUniform("MV", modelView);
     pPhong.setUniform("MVit", modelViewIT);
     pPhong.setUniform("lightPosition", lightPosition);
+    pPhong.setTexture("tNormals", udeNormals, 0);
     teapotArray.bind();
     GL(glDrawElements(GL_TRIANGLES, sizeof(Teapot::indices) / sizeof(Teapot::indices[0]), GL_UNSIGNED_INT, (void*)0));
   }
@@ -153,6 +161,18 @@ public:
                         sizeof(UnitPlane::vertices)/sizeof(UnitPlane::vertices[0]),
                         3, GL_STATIC_DRAW);
     planeArray.connectVertexAttrib(planePosBuffer, pSimpleTex, "vertexPosition", 3);
+    planeNormalBuffer.setData(UnitPlane::normals,
+                           sizeof(UnitPlane::normals)/sizeof(UnitPlane::normals[0]),
+                           3, GL_STATIC_DRAW);
+    planeArray.connectVertexAttrib(planeNormalBuffer, pSimpleTex, "vertexNormal", 3);
+    planeTangentBuffer.setData(UnitPlane::tangents,
+                           sizeof(UnitPlane::tangents)/sizeof(UnitPlane::tangents[0]),
+                           3, GL_STATIC_DRAW);
+    planeArray.connectVertexAttrib(planeTangentBuffer, pSimpleTex, "vertexTangent", 3);
+    planeBinormalBuffer.setData(UnitPlane::binormals,
+                           sizeof(UnitPlane::binormals)/sizeof(UnitPlane::binormals[0]),
+                           3, GL_STATIC_DRAW);
+    planeArray.connectVertexAttrib(planeBinormalBuffer, pSimpleTex, "vertexBinormal", 3);
     planeTexCoordBuffer.setData(UnitPlane::texCoords,
                               sizeof(UnitPlane::texCoords)/sizeof(UnitPlane::texCoords[0]),
                               2, GL_STATIC_DRAW);
@@ -170,6 +190,10 @@ public:
                               3, GL_STATIC_DRAW);
     teapotArray.connectVertexAttrib(teapotNormalBuffer, pPhong, "vertexNormal", 3);
     teapotIndexBuffer.setData(Teapot::indices, sizeof(Teapot::indices)/sizeof(Teapot::indices[0]));
+    teapotTexCoordBuffer.setData(Teapot::texCoords,
+                                sizeof(Teapot::texCoords)/sizeof(Teapot::texCoords[0]),
+                                2, GL_STATIC_DRAW);
+    teapotArray.connectVertexAttrib(teapotTexCoordBuffer, pPhong, "texCoords", 2);
   }
 
   virtual void keyboard(int key, int scancode, int action, int mods) override {
