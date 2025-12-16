@@ -7,14 +7,17 @@ layout(location = 3) in vec3 vertexBinormal;
 layout(location = 4) in vec2 vertexTexCoords;
 
 uniform mat4 MVP; // model-view-projection Matrix
+uniform mat4 M; // model Matrix
 uniform mat4 MV; // model-view Matrix
 uniform mat4 MVit; // model-view inverse transpose Matrix
+uniform mat4 WorldToLight;
 
 out vec3 posViewSpaceInterpolated;
 out vec3 normalViewSpaceInterpolated;
 out vec3 tangentViewSpaceInterpolated;
 out vec3 binormtViewSpaceInterpolated;
 out vec2 texCoordsInterpolated;
+out vec4 posLightSpaceInterpolated;
 
 void main() {
   gl_Position = MVP * vec4(vertexPosition, 1);
@@ -24,4 +27,6 @@ void main() {
   tangentViewSpaceInterpolated = normalize((MVit * vec4(vertexTangent, 0)).xyz);;
   binormtViewSpaceInterpolated = normalize((MVit * vec4(vertexBinormal, 0)).xyz);;
   texCoordsInterpolated = vertexTexCoords;
+
+  posLightSpaceInterpolated    = WorldToLight * M * vec4(vertexPosition, 1);
 }
