@@ -8,7 +8,7 @@ in vec2 texCoordsInterpolated;
 in vec4 posLightSpaceInterpolated;
 
 uniform sampler2D tn;
-uniform sampler2DShadow shadowMap;
+uniform sampler2D shadowMap;
 uniform float depthBias = 0.01;
 
 uniform vec4 lightPosition;
@@ -23,6 +23,21 @@ uniform vec3 ld = vec3(0.9f, 0.9f, 0.9f); // light diffuse color
 uniform vec3 ls = vec3(0.9f, 0.9f, 0.9f); // light specular color
 
 out vec4 color;
+
+bool isInShadow(vec4 fragPosLightSpace){
+  float bias = 0.01;      // TODO: Which value of bias should we use?
+
+  vec4 biasedPosLightSpace = fragPosLightSpace;
+  biasedPosLightSpace.z -= bias;
+
+  vec3 projCoords = biasedPosLightSpace.xyz / biasedPosLightSpace.w;
+  projCoords = projCoords * 0.5 + 0.5;    // [-1,1] -> [0,1] 
+  
+  float closestDepth = texture(shadowMap, projCoords.xy).x; 
+  float currentDepth = projCoords.z;
+
+  return currentDepth > closestDepth;
+}  
 
 void main() {
   vec3 normalMap = texture(tn, texCoordsInterpolated).xyz;
@@ -58,13 +73,9 @@ void main() {
   }
 
   vec3 specular = s * ks * ls;
-
-  vec4 biasedShadow = posLightSpaceInterpolated;
-  biasedShadow.z -= depthBias;
-  float shadowPercentage = textureProj(shadowMap,biasedShadow);
-
-  vec4 lightColor = vec4(ambient + diffuse + specular, 1);
-  vec4 shadowColor = vec4(ambient, 1);
-
-  color = mix(shadowColor, lightColor, shadowPercentage);
+  
+  if (isInShadow(posLightSpaceInterpolated))
+    color = vec4(ambient, 1);
+  else
+    color = vec4(ambient + diffuse + specular, 1);
 }

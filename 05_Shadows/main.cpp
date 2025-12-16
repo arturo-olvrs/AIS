@@ -83,7 +83,7 @@ public:
     pLight{GLProgram::createFromFile("res/light.vert","res/light.frag")},
     pShadow{GLProgram::createFromFile("res/shadow.vert","res/shadow.frag")}
   {
-    shadowMap.setEmpty(1024,1024);
+    shadowMap.setEmpty(2048,2048);
   }
 
   virtual void init() override {
@@ -132,10 +132,7 @@ public:
     float ratio = float(shadowMap.getWidth()) / float(shadowMap.getHeight());
     lightProjectionMatrix = Mat4::perspective(60.0f, ratio, 1.0f, 400.0f);   // TODO: What values to use here?
 
-    Mat4 clipToTexMatrix = Mat4::translation(0.5f, 0.5f, 0.5f) *
-                            Mat4::scaling(0.5f, 0.5f, 0.5f);
-
-    worldToLightMatrix = clipToTexMatrix * lightProjectionMatrix * lightViewMatrix;
+    worldToLightMatrix = lightProjectionMatrix * lightViewMatrix;
   }
 
   void renderLight() {
