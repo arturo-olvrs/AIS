@@ -84,7 +84,7 @@ public:
   float mousewheelFactor{10.0f}; // system specific factor
 
   MyGLApp() :
-    GLApp(800,600,1,"Assignment 05 - Hello Shadows"),
+    GLApp(800,600,1,"Assignment 06 - Hello Sky"),
     pPhongBump{GLProgram::createFromFile("res/phongBump.vert","res/phongBump.frag")},
     pPhongBumpTex{GLProgram::createFromFile("res/phongBump.vert","res/phongBumpTex.frag")},
     pLight{GLProgram::createFromFile("res/light.vert","res/light.frag")},
@@ -218,6 +218,8 @@ public:
       pPhongBump.enable();
       pPhongBump.setUniform("MVP", modelViewProjection);
       pPhongBump.setUniform("MV", modelView);
+      pPhongBump.setUniform("invView", Mat4::inverse(viewMatrix));
+      pPhongBump.setUniform("ITinvView", Mat4::transpose(viewMatrix));  // Mat4::inverse(viewMatrix) -> Inverse transpose = Mat4::transpose(viewMatrix)
       pPhongBump.setUniform("M", modelMatrix);
       pPhongBump.setUniform("MVit", modelViewIT);
       pPhongBump.setUniform("lightPosition", lightPosition);

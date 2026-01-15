@@ -13,6 +13,8 @@ uniform samplerCube skybox;
 uniform float depthBias = 0.01;
 
 uniform vec4 lightPosition;
+uniform mat4 invView;
+uniform mat4 ITinvView;
 
 uniform vec3 ka = vec3(0.05f, 0.05f, 0.05f); // material ambient color
 uniform vec3 kd = vec3(0.0f, 0.0f, 0.8f); // material diffuse color
@@ -26,7 +28,7 @@ uniform vec3 ls = vec3(0.9f, 0.9f, 0.9f); // light specular color
 out vec4 color;
 
 bool isInShadow(vec4 fragPosLightSpace){
-  float bias = 0.01;      // TODO: Which value of bias should we use?
+  float bias = 0.01;
 
   vec4 biasedPosLightSpace = fragPosLightSpace;
   biasedPosLightSpace.z -= bias;
@@ -63,17 +65,21 @@ void main() {
   vec3 ambient = ka * la;
 
   // diffuse color
-  vec3 viewVec =  normalize(-posViewSpaceInterpolated); // camera is placed in origin in view space, view vector == -posViewSpace
-  vec3 R_FromView = reflect(-viewVec, N);
-  vec3 real_kd = kd * 0.5 + texture(skybox, R_FromView).rgb * 0.5;
+  vec3 pos_WorldSpace    = (invView * vec4(posViewSpaceInterpolated, 1.0)).xyz;
+  vec3 camera_WorldSpace = (invView * vec4(0,0,0, 1.0)).xyz;
+  vec3 N_WorldSpace = normalize((ITinvView * vec4(N,0)).xyz);
+  vec3 viewVec_WorldSpace = normalize(camera_WorldSpace - pos_WorldSpace);
+  vec3 R_WorldSpace = reflect(-viewVec_WorldSpace, N_WorldSpace);
+
+  vec3 real_kd = kd * 0.5 + texture(skybox, R_WorldSpace).rgb * 0.5;
 
   float d = max(0, dot(N, lightVec));
   vec3 diffuse = d * real_kd * ld;
 
   // specular color
-
   float s = 0;
   if(d > 0) {
+    vec3 viewVec =  normalize(-posViewSpaceInterpolated); // camera is placed in origin in view space, view vector == -posViewSpace
     vec3 reflected =  reflect(-lightVec, N); // reflect expects L pointing to surface   // From Light
     s = pow(max(0, dot(viewVec, reflected)), shininess);
   }
