@@ -3,15 +3,15 @@
 in vec3 posViewSpaceInterpolated;
 in vec3 normalViewSpaceInterpolated;
 in vec3 tangentViewSpaceInterpolated;
-in vec3 binormViewSpaceInterpolated;
+in vec3 binormtViewSpaceInterpolated;
 in vec2 texCoordsInterpolated;
-in vec4 shadowPos;
+in vec4 posLightSpaceInterpolated;
+
 
 uniform sampler2D td;
 uniform sampler2D ts;
 uniform sampler2D tn;
-uniform sampler2DShadow shadowMap;
-uniform float depthBias = 0.01;
+uniform sampler2D shadowMap;
 
 uniform vec4 lightPosition;
 
@@ -24,14 +24,31 @@ uniform vec3 ls = vec3(0.9f, 0.9f, 0.9f); // light specular color
 
 out vec4 color;
 
+
+bool isInShadow(vec4 fragPosLightSpace){
+  float bias = 0.01;      // TODO: Which value of bias should we use?
+
+  vec4 biasedPosLightSpace = fragPosLightSpace;
+  biasedPosLightSpace.z -= bias;
+
+  vec3 projCoords = biasedPosLightSpace.xyz / biasedPosLightSpace.w;
+  projCoords = projCoords * 0.5 + 0.5;    // [-1,1] -> [0,1] 
+  
+  float closestDepth = texture(shadowMap, projCoords.xy).r; 
+  float currentDepth = projCoords.z;
+
+  return currentDepth > closestDepth;
+}   
+
 void main() {
   vec3 kd = texture(td, texCoordsInterpolated).rgb;
   vec3 ks = texture(ts, texCoordsInterpolated).rgb;
   vec3 normalMap = texture(tn, texCoordsInterpolated).xyz;
 
+
   vec3 N = normalize(normalViewSpaceInterpolated);
   vec3 T = normalize(tangentViewSpaceInterpolated);
-  vec3 B = normalize(binormViewSpaceInterpolated);
+  vec3 B = normalize(binormtViewSpaceInterpolated);
 
   if(normalMap != vec3(0, 0, 0)) {
     normalMap = 2 * (normalMap - vec3(0.5)); // [0, 1] should map to [-1, 1]
@@ -61,12 +78,8 @@ void main() {
 
   vec3 specular = s * ks * ls;
 
-  vec4 biasedShadow = shadowPos;
-  biasedShadow.z -= depthBias;
-  float shadowPercentage = textureProj(shadowMap,biasedShadow);
-
-  vec4 lightColor = vec4(ambient + diffuse + specular, 1);
-  vec4 shadowColor = vec4(ambient, 1);
-
-  color = mix(shadowColor, lightColor, shadowPercentage);
+  if (isInShadow(posLightSpaceInterpolated))
+    color = vec4(ambient, 1);
+  else
+    color = vec4(ambient + diffuse + specular, 1);
 }

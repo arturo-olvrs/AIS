@@ -2,34 +2,10 @@
 #include <GLApp.h>
 #include <Vec2.h>
 #include <GLFramebuffer.h>
-
 #include "Teapot.h"
 #include "UnitPlane.h"
 #include "UnitCube.h"
 
-#ifndef __EMSCRIPTEN__
-static const std::string shadowVertexShader {R"(#version 410
-uniform mat4 MVP;
-layout (location = 0) in vec3 vPos;
-void main() {
-    gl_Position = MVP * vec4(vPos, 1.0);
-})"};
-
-static const std::string shadowFragmentShader {R"(#version 410
-void main() {
-})"};
-#else
-static const std::string shadowVertexShader {R"(#version 300 es
-uniform mat4 MVP;
-in vec3 vPos;
-void main() {
-    gl_Position = MVP * vec4(vPos, 1.0);
-})"};
-
-static const std::string shadowFragmentShader {R"(#version 300 es
-void main() {
-})"};
-#endif
 
 class LightProperties {
 public:
@@ -42,16 +18,30 @@ public:
 class MyGLApp : public GLApp {
 public:
   LightProperties light;
+  Vec4 lightPosition;
+
+  Mat4 lightModelMatrix;
+  Mat4 lightViewMatrix;
+  Mat4 lightProjectionMatrix;
+  
+  Mat4 modelMatrix;
+  Mat4 viewMatrix;
   Mat4 projectionMatrix;
+
+
+  Mat4 worldToLightMatrix;
 
   GLTexture2D stonesDiffuse{GL_LINEAR, GL_LINEAR};
   GLTexture2D stonesSpecular{GL_LINEAR, GL_LINEAR};
   GLTexture2D stonesNormals{GL_LINEAR, GL_LINEAR};
   GLTexture2D udeNormals{GL_LINEAR, GL_LINEAR};
+  
+  GLTextureCube envMap{GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE};
 
   GLProgram pPhongBump;
   GLProgram pPhongBumpTex;
   GLProgram pLight;
+  GLProgram pSkybox;
 
   GLArray lightArray;
   GLBuffer lightPosBuffer{GL_ARRAY_BUFFER};
@@ -72,15 +62,13 @@ public:
   GLBuffer teapotTexCoordBuffer{GL_ARRAY_BUFFER};
   GLBuffer teapotIndexBuffer{GL_ELEMENT_ARRAY_BUFFER};
 
-  GLProgram shadowProgram;
-  GLFramebuffer framebuffer;
+  GLArray skyboxArray;
+  GLBuffer skyboxPosBuffer{GL_ARRAY_BUFFER};
+  GLBuffer skyboxIndexBuffer{GL_ELEMENT_ARRAY_BUFFER};
+
+  GLProgram pShadow;
+  GLFramebuffer shadowBuffer;
   GLDepthTexture shadowMap;
-  const Mat4 cliptToTextureMatrix {
-    0.5f, 0.0f, 0.0f, 0.5f,
-    0.0f, 0.5f, 0.0f, 0.5f,
-    0.0f, 0.0f, 0.5f, 0.5f,
-    0.0f, 0.0f, 0.0f, 1.0f
-  };
 
   bool leftMouseDown{false};
   bool rightMouseDown{false};
@@ -95,26 +83,13 @@ public:
   float mouseSensitivity{0.15f}; // system specific factor
   float mousewheelFactor{10.0f}; // system specific factor
 
-  Mat4 viewMatrix;
-  Mat4 lightModelMatrix;
-  Mat4 lightProjectionMatrix;
-  Mat4 lightViewMatrix;
-  Mat4 worldToShadowMatrix;
-
-  Vec4 lightPosition;
-
   MyGLApp() :
-    GLApp(800,600,1,"Assignment 06 - Hello Sky"),
-#ifndef __EMSCRIPTEN__
+    GLApp(800,600,1,"Assignment 05 - Hello Shadows"),
     pPhongBump{GLProgram::createFromFile("res/phongBump.vert","res/phongBump.frag")},
     pPhongBumpTex{GLProgram::createFromFile("res/phongBump.vert","res/phongBumpTex.frag")},
     pLight{GLProgram::createFromFile("res/light.vert","res/light.frag")},
-#else
-  pPhongBump{GLProgram::createFromFile("res/phongBump3.vert","res/phongBump3.frag")},
-  pPhongBumpTex{GLProgram::createFromFile("res/phongBump3.vert","res/phongBumpTex3.frag")},
-  pLight{GLProgram::createFromFile("res/light3.vert","res/light3.frag")},
-#endif
-    shadowProgram{GLProgram::createFromString(shadowVertexShader,shadowFragmentShader)}
+    pShadow{GLProgram::createFromFile("res/shadow.vert","res/shadow.frag")},
+    pSkybox{GLProgram::createFromFile("res/skybox.vert","res/skybox.frag")}
   {
     shadowMap.setEmpty(2048,2048);
   }
@@ -142,108 +117,162 @@ public:
 
     image = ImageLoader::load("res/UDE_Normals.png");
     udeNormals.setData(image.data,image.width, image.height, image.componentCount);
+
+    image = ImageLoader::load("res/envmap/negx.jpg", false);
+    envMap.setData(image, Face::NEGX);
+
+    image = ImageLoader::load("res/envmap/posx.jpg", false);
+    envMap.setData(image, Face::POSX);
+
+    image = ImageLoader::load("res/envmap/negy.jpg", false);
+    envMap.setData(image, Face::NEGY);
+
+    image = ImageLoader::load("res/envmap/posy.jpg", false);
+    envMap.setData(image, Face::POSY);
+
+    image = ImageLoader::load("res/envmap/negz.jpg", false);
+    envMap.setData(image, Face::NEGZ);
+
+    image = ImageLoader::load("res/envmap/posz.jpg", false);
+    envMap.setData(image, Face::POSZ);
   }
 
   virtual void animate(double animationTime) override {
     light.angle = light.degreesPerSecond * float(animationTime);
   }
 
-  void updateState() {
+  void configureMatrices() {
     viewMatrix = Mat4::lookAt(viewPosition, {0,0,0}, {0,1,0});
-
     viewMatrix = viewMatrix * Mat4::rotationX(viewRotation[0]);
     viewMatrix = viewMatrix * Mat4::rotationY(viewRotation[1]);
     viewMatrix = viewMatrix * Mat4::rotationZ(viewRotation[2]);
 
-    lightModelMatrix = Mat4::rotationY(light.angle) *  Mat4::translation(-80, 60, 80);
+    lightModelMatrix = Mat4::rotationY(-light.angle) *  Mat4::translation(-80, 60, 80);
     lightPosition =  viewMatrix * lightModelMatrix * Vec4(0, 0, 0, 1);
 
-    lightProjectionMatrix = Mat4::perspective(60.0f,
-                                        float(shadowMap.getWidth())/
-                                        float(shadowMap.getHeight()),
-                                        1.0f, 400);
-    lightViewMatrix = Mat4::lookAt(lightModelMatrix * Vec3{0,0,0}, {0,0,0}, {0,1,0});
 
-    worldToShadowMatrix = cliptToTextureMatrix*lightProjectionMatrix*lightViewMatrix;
+    // Equivalent to View matrix from light's point of view
+    lightViewMatrix = Mat4::lookAt((lightModelMatrix * Vec4{0,0,0,1}).xyz, {0,0,0}, {0,1,0});
+
+    // Equivalent to Projection matrix from light's point of view
+    float ratio = float(shadowMap.getWidth()) / float(shadowMap.getHeight());
+    lightProjectionMatrix = Mat4::perspective(60.0f, ratio, 1.0f, 400.0f);
+
+    worldToLightMatrix = lightProjectionMatrix * lightViewMatrix;
   }
 
-  void renderLightSource() {
+  void renderLight() {
     pLight.enable();
-    pLight.setUniform("MVP", projectionMatrix * viewMatrix * lightModelMatrix);
+    Mat4 modelMatrix = lightModelMatrix;
+    pLight.setUniform("MVP", projectionMatrix * viewMatrix * modelMatrix);
     lightArray.bind();
     GL(glDrawElements(GL_TRIANGLES, sizeof(UnitCube::indices) / sizeof(UnitCube::indices[0]), GL_UNSIGNED_INT, (void*)0));
   }
 
-  void renderScene(bool forReal) {
 
+  void renderScene(bool trulyDraw) {
+
+    // Determine whether we render from light's point of view or camera's
+    bool renderFromLight = !trulyDraw;
+
+    
+    //Rendering the Plane
     Mat4 modelMatrix = Mat4::scaling(100, 100, 100);
 
-    if (forReal) {
-      const Mat4 modelView = viewMatrix * modelMatrix;
-      const Mat4 modelViewProjection = projectionMatrix * modelView;
-      const Mat4 modelViewIT = Mat4::transpose(Mat4::inverse(modelView));
-
+    if (renderFromLight) {
+      pShadow.enable();
+      pShadow.setUniform("MVP", lightProjectionMatrix * lightViewMatrix * modelMatrix);
+    }else{
       pPhongBumpTex.enable();
+      Mat4 modelView = viewMatrix * modelMatrix;
+      Mat4 modelViewProjection = projectionMatrix * modelView;
+      Mat4 modelViewIT = Mat4::transpose(Mat4::inverse(modelView));
+
       pPhongBumpTex.setUniform("MVP", modelViewProjection);
       pPhongBumpTex.setUniform("MV", modelView);
       pPhongBumpTex.setUniform("M", modelMatrix);
-      pPhongBumpTex.setUniform("worldToShadow", worldToShadowMatrix);
       pPhongBumpTex.setUniform("MVit", modelViewIT);
       pPhongBumpTex.setUniform("lightPosition", lightPosition);
+      pPhongBumpTex.setUniform("WorldToLight", worldToLightMatrix);
       pPhongBumpTex.setTexture("td", stonesDiffuse,0);
       pPhongBumpTex.setTexture("ts", stonesSpecular,1);
       pPhongBumpTex.setTexture("tn", stonesNormals,2);
       pPhongBumpTex.setTexture("shadowMap", shadowMap,3);
-    } else {
-      shadowProgram.enable();
-      shadowProgram.setUniform("MVP", lightProjectionMatrix*lightViewMatrix*modelMatrix);
     }
 
     planeArray.bind();
-    GL(glDrawArrays(GL_TRIANGLES, 0, sizeof(UnitPlane::vertices) / (3*sizeof(UnitPlane::vertices[0]))));
+    GL(glDrawArrays(GL_TRIANGLES, 0, sizeof(UnitPlane::vertices) / sizeof(UnitPlane::vertices[0])));
 
+
+
+    // Rendering the Teapot
     modelMatrix = {};
 
-    if (forReal) {
-      const Mat4 modelView = viewMatrix * modelMatrix;
-      const Mat4 modelViewProjection = projectionMatrix * modelView;
-      const Mat4 modelViewIT = Mat4::transpose(Mat4::inverse(modelView));
+    if (renderFromLight) {
+      pShadow.setUniform("MVP", lightProjectionMatrix * lightViewMatrix * modelMatrix);
+    } else {
+      Mat4 modelView = viewMatrix * modelMatrix;
+      Mat4 modelViewProjection = projectionMatrix * modelView;
+      Mat4 modelViewIT = Mat4::transpose(Mat4::inverse(modelView));
 
       pPhongBump.enable();
       pPhongBump.setUniform("MVP", modelViewProjection);
       pPhongBump.setUniform("MV", modelView);
       pPhongBump.setUniform("M", modelMatrix);
-      pPhongBumpTex.setUniform("worldToShadow", worldToShadowMatrix);
       pPhongBump.setUniform("MVit", modelViewIT);
       pPhongBump.setUniform("lightPosition", lightPosition);
+      pPhongBump.setUniform("WorldToLight", worldToLightMatrix);
       pPhongBump.setTexture("tn", udeNormals,0);
       pPhongBump.setTexture("shadowMap", shadowMap,1);
-    } else {
-      shadowProgram.setUniform("MVP", lightProjectionMatrix*lightViewMatrix*modelMatrix);
+      pPhongBump.setTexture("skybox", envMap,2);
     }
 
     teapotArray.bind();
     GL(glDrawElements(GL_TRIANGLES, sizeof(Teapot::indices) / sizeof(Teapot::indices[0]), GL_UNSIGNED_INT, (void*)0));
+
+    // Rendering the Skybox
+    if (!renderFromLight) {
+      GL(glDepthFunc(GL_LEQUAL));
+      GL(glDepthMask(GL_FALSE));
+      pSkybox.enable();
+      modelMatrix = Mat4{};
+
+      Mat4 viewMatrixWithoutTranslation = {};
+      viewMatrixWithoutTranslation = viewMatrixWithoutTranslation * Mat4::rotationX(viewRotation[0]);
+      viewMatrixWithoutTranslation = viewMatrixWithoutTranslation * Mat4::rotationY(viewRotation[1]);
+      viewMatrixWithoutTranslation = viewMatrixWithoutTranslation * Mat4::rotationZ(viewRotation[2]);
+
+      pSkybox.setUniform("MVP", projectionMatrix * viewMatrixWithoutTranslation * modelMatrix);
+      pSkybox.setTexture("skybox", envMap,0);
+      skyboxArray.bind();
+      GL(glDrawElements(GL_TRIANGLES, sizeof(UnitCube::indices) / sizeof(UnitCube::indices[0]), GL_UNSIGNED_INT, (void*)0));
+      GL(glDepthFunc(GL_LESS));
+      GL(glDepthMask(GL_TRUE));
+    }
   }
 
   virtual void draw() override {
-    updateState();
+    GL(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+    configureMatrices();
 
-    framebuffer.bind(shadowMap);
+    
+    shadowBuffer.bind(shadowMap);
     GL(glViewport(0, 0, GLsizei(shadowMap.getWidth() ), GLsizei(shadowMap.getHeight())));
     GL(glClear(GL_DEPTH_BUFFER_BIT));
     renderScene(false);
-    framebuffer.unbind2D();
+    shadowBuffer.unbind2D();
 
-    const Dimensions dim = glEnv.getFramebufferSize();
-    GL(glViewport(0, 0, GLsizei(dim.width), GLsizei(dim.height)));
+
+    GL(glViewport(0, 0,
+                  GLsizei(glEnv.getFramebufferSize().width),
+                  GLsizei(glEnv.getFramebufferSize().height)));
     GL(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
-    renderLightSource();
+    renderLight();
     renderScene(true);
   }
 
   virtual void resize(int width, int height) override {
-    const float ratio = static_cast<float>(width) / static_cast<float>(height);
+    float ratio = static_cast<float>(width) / static_cast<float>(height);
     projectionMatrix = Mat4::perspective(60.0f, ratio, 0.1f, 10000.0f);
     GL(glViewport(0, 0, width, height));
   }
@@ -298,6 +327,12 @@ public:
                                 3, GL_STATIC_DRAW);
     teapotArray.connectVertexAttrib(teapotTexCoordBuffer, pPhongBump, "vertexTexCoords", 3);
     teapotIndexBuffer.setData(Teapot::indices, sizeof(Teapot::indices)/sizeof(Teapot::indices[0]));
+
+    skyboxPosBuffer.setData(UnitCube::vertices,
+                            sizeof(UnitCube::vertices)/sizeof(UnitCube::vertices[0]),
+                            3, GL_STATIC_DRAW);
+    skyboxArray.connectVertexAttrib(skyboxPosBuffer, pSkybox, "vertexPosition", 3);
+    skyboxIndexBuffer.setData(UnitCube::indices, sizeof(UnitCube::indices)/sizeof(UnitCube::indices[0]));
   }
 
   virtual void keyboard(int key, int scancode, int action, int mods) override {
